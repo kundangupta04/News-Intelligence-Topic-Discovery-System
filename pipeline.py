@@ -2,6 +2,7 @@
 import io
 import os
 import re
+import urllib.request
 
 import numpy as np
 import pandas as pd
@@ -16,12 +17,26 @@ DATA_FILE = os.path.join("data", "bbc_news.csv")
 STOP_WORDS = set(ENGLISH_STOP_WORDS) | {"said", "says", "say", "mr", "mrs", "ms", "told",
                                         "bbc", "don", "didn", "doesn", "isn", "wasn"}
 
+DATA_URL = ("https://raw.githubusercontent.com/suraj-deshmukh/"
+            "BBC-Dataset-News-Classification/master/dataset/dataset.csv")
+
 
 # ---------------------------------------------------------------- 1. data
+
+def download_data(path=DATA_FILE):
+    """Download the public BBC dataset (used on first start, e.g. after deployment)."""
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    try:
+        urllib.request.urlretrieve(DATA_URL, path + ".tmp")
+        os.replace(path + ".tmp", path)          # only keep the file if the download finished
+    except Exception as error:
+        raise FileNotFoundError(f"Dataset not found at {path} and the automatic download "
+                                f"failed ({error}). Download the BBC CSV manually.") from error
+
 def load_data(path=DATA_FILE):
     """Read the CSV, remove empty rows and duplicates, split title and text."""
     if not os.path.exists(path):
-        raise FileNotFoundError(f"Dataset not found at {path}. Run: python download_data.py")
+        download_data(path)
     raw = open(path, "rb").read().decode("utf-8", errors="replace")  # file mixes encodings
     df = pd.read_csv(io.StringIO(raw))
     if "news" not in df.columns:
